@@ -10,6 +10,11 @@
   </head>
   <body>
 
+    <!-- Indicador de estado de conexión -->
+    <div id="connection-status" class="connection-status">
+      <span id="status-text">●</span>
+    </div>
+
     <main id="converter-container">
       <h1>Conversor de Temperatura</h1>
 
@@ -39,8 +44,32 @@
     <script src="converter.js"></script>
     <script>
       if('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          .then(registration => {
+            console.log('Service Worker registrado exitosamente:', registration.scope);
+          })
+          .catch(error => {
+            console.error('Error al registrar el Service Worker:', error);
+          });
       }
+
+      // Actualizar indicador de conexión
+      const statusIndicator = document.getElementById('connection-status');
+      const statusText = document.getElementById('status-text');
+
+      function updateConnectionStatus() {
+        if (navigator.onLine) {
+          statusIndicator.className = 'connection-status online';
+          statusText.textContent = '● Online';
+        } else {
+          statusIndicator.className = 'connection-status offline';
+          statusText.textContent = '● Offline';
+        }
+      }
+
+      window.addEventListener('online', updateConnectionStatus);
+      window.addEventListener('offline', updateConnectionStatus);
+      updateConnectionStatus(); // Estado inicial
     </script>
 
   </body>
