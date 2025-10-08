@@ -10,6 +10,14 @@ self.addEventListener('install', event => {
       '/converter.css'
     ]);
   })());
+  
+  // Activa el service worker inmediatamente
+  self.skipWaiting();
+});
+
+// Activa el nuevo service worker
+self.addEventListener('activate', event => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', event => {
@@ -29,8 +37,64 @@ self.addEventListener('fetch', event => {
           cache.put(event.request, fetchResponse.clone());
           return fetchResponse;
         } catch (e) {
-          // The network failed.
+          // La red falló - mostrar notificación de offline
+          self.registration.showNotification('Sin conexión', {
+            body: 'Estás trabajando en modo offline. Tus datos se guardarán.',
+            icon: '/icon512.png',
+            badge: '/icon512.png',
+            tag: 'offline-notification',
+            requireInteraction: false
+          });
         }
     }
   })());
+});
+
+// Manejo de Background Sync - se activa cuando recupera conexión
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-temperature-data') {
+    event.waitUntil(syncData());
+  }
+});
+
+async function syncData() {
+  try {
+    // Aquí puedes sincronizar datos pendientes con el servidor
+    // Por ejemplo, enviar conversiones guardadas mientras estaba offline
+    
+    // Mostrar notificación de que volvió la conexión
+    await self.registration.showNotification('Conexión restablecida', {
+      body: '¡Ya estás de vuelta online! Tus datos están sincronizados.',
+      icon: '/icon512.png',
+      badge: '/icon512.png',
+      tag: 'online-notification',
+      requireInteraction: false,
+      vibrate: [200, 100, 200]
+    });
+    
+    console.log('Sincronización completada exitosamente');
+  } catch (error) {
+    console.error('Error en la sincronización:', error);
+  }
+}
+
+// Manejo de clics en notificaciones
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  // Abrir o enfocar la aplicación
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Si ya hay una ventana abierta, enfocarla
+      for (let client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      // Si no hay ventana abierta, abrir una nueva
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
 });
